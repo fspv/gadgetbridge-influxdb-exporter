@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "gadgetbridge-influxdb-exporter"
+version = "0.1.0"
+description = "Gadgetbridge InfluxDB Exporter"
+authors = ["Pavel Safronov <pv.safronov@gmail.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.8"
+google-auth-oauthlib = "*"
+google-auth-httplib2 = "*"
+google-api-python-client = "*"
+pydantic-settings = "*"
+python-dotenv = "*"
+influxdb-client = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
