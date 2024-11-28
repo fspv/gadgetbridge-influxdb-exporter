@@ -1,4 +1,4 @@
-# Automated Data Export & Visualization for Xiaomi Mi Band Users
+# Automated Data Export & Visualization for Gadget Bridge Users
 
 This script allows you to seamlessly download and process your Xiaomi Mi Band data from [Gadget Bridge](https://gadgetbridge.org/). It retrieves your exported files from Google Drive, parses the data, and stores it in an InfluxDB database, enabling you to easily visualize and analyze your data with tools like Grafana.
 
