@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     influxdb_bucket: str
     run_interval: int = 3600  # seconds
     daemon: bool = False  # run indefinitely
+    debug: bool = False
 
     # Define the scopes needed for Google Drive API
     scopes: list[str] = ["https://www.googleapis.com/auth/drive.readonly"]
@@ -451,13 +452,21 @@ class WristbandMetricsExporter:
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger("influxdb_client").setLevel(logging.DEBUG)
-    logging.getLogger("influxdb_client.client.write_api").setLevel(logging.DEBUG)
-    logging.getLogger("urllib3").setLevel(logging.DEBUG)
-
     # Load settings from environment variables (can also use .env file)
     settings = Settings()  # type: ignore
+
+    log_level = logging.INFO
+
+    if settings.debug:
+        log_level = logging.DEBUG
+
+    logging.basicConfig(
+        format="%(asctime)s - %(pathname)s:%(lineno)d - %(message)s",
+        level=log_level,
+    )
+    logging.getLogger("influxdb_client").setLevel(log_level)
+    logging.getLogger("influxdb_client.client.write_api").setLevel(log_level)
+    logging.getLogger("urllib3").setLevel(log_level)
 
     # Initialize and run the exporter
     exporter = WristbandMetricsExporter(settings)
