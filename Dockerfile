@@ -10,7 +10,7 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry config virtualenvs.create false && poetry install --no-dev
 
 # Copy the rest of the files
-COPY main.py ./
+COPY *.py ./
 
 # Run the main.py file
 CMD ["python", "main.py"]
