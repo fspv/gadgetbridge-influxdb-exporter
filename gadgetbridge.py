@@ -163,6 +163,114 @@ class MetricsExporter:
                 logging.error(f"Failed to parse activity sample: {e}")
                 continue
 
+    def get_xiaomi_daily_summary_samples(
+            self, conn: sqlite3.Connection
+    ) -> Iterator[models.XiaomiDailySummarySample]:
+        """Get all daily summary samples from the database."""
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # check if table exists
+        cursor.execute(
+            """
+            SELECT name FROM sqlite_master WHERE type='table' AND name='XIAOMI_DAILY_SUMMARY_SAMPLE'
+        """
+        )
+        if not cursor.fetchone():
+            logging.info("XIAOMI_DAILY_SUMMARY_SAMPLE table not found")
+            return
+
+        logging.info("XIAOMI_DAILY_SUMMARY_SAMPLE table found")
+
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM XIAOMI_DAILY_SUMMARY_SAMPLE
+            ORDER BY TIMESTAMP ASC
+        """
+        )
+
+        for row in cursor:
+            try:
+                daily_summary_sample = models.XiaomiDailySummarySample.model_validate(dict(row))
+                logging.debug(f"Daily summary sample: {daily_summary_sample}")
+                yield daily_summary_sample
+            except Exception as e:
+                logging.error(f"Failed to parse daily summary sample: {e}")
+                continue
+
+    def get_xiaomi_sleep_stage_samples(
+        self, conn: sqlite3.Connection
+    ) -> Iterator[models.XiaomiSleepStageSample]:
+        """Get all sleep stage samples from the database."""
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # check if table exists
+        cursor.execute(
+            """
+            SELECT name FROM sqlite_master WHERE type='table' AND name='XIAOMI_SLEEP_STAGE_SAMPLE'
+        """
+        )
+        if not cursor.fetchone():
+            logging.info("XIAOMI_SLEEP_STAGE_SAMPLE table not found")
+            return
+
+        logging.info("XIAOMI_SLEEP_STAGE_SAMPLE table found")
+
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM XIAOMI_SLEEP_STAGE_SAMPLE
+            ORDER BY TIMESTAMP ASC
+        """
+        )
+
+        for row in cursor:
+            try:
+                sleep_stage_sample = models.XiaomiSleepStageSample.model_validate(dict(row))
+                logging.debug(f"Sleep stage sample: {sleep_stage_sample}")
+                yield sleep_stage_sample
+            except Exception as e:
+                logging.error(f"Failed to parse sleep stage sample: {e}")
+                continue
+
+    def get_xiaomi_sleep_time_samples(
+        self, conn: sqlite3.Connection
+    ) -> Iterator[models.XiaomiSleepTimeSample]:
+        """Get all sleep time samples from the database."""
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # check if table exists
+        cursor.execute(
+            """
+            SELECT name FROM sqlite_master WHERE type='table' AND name='XIAOMI_SLEEP_TIME_SAMPLE'
+        """
+        )
+        if not cursor.fetchone():
+            logging.info("XIAOMI_SLEEP_TIME_SAMPLE table not found")
+            return
+
+        logging.info("XIAOMI_SLEEP_TIME_SAMPLE table found")
+
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT * FROM XIAOMI_SLEEP_TIME_SAMPLE
+            ORDER BY TIMESTAMP ASC
+        """
+        )
+
+        for row in cursor:
+            try:
+                sleep_time_sample = models.XiaomiSleepTimeSample.model_validate(dict(row))
+                logging.debug(f"Sleep time sample: {sleep_time_sample}")
+                yield sleep_time_sample
+            except Exception as e:
+                logging.error(f"Failed to parse sleep time sample: {e}")
+                continue
+
     def export_metrics(self):
         """Download database and export all activity samples to InfluxDB."""
 
@@ -183,6 +291,66 @@ class MetricsExporter:
 
                     # Create points for each metric
                     points = []
+
+                    for sample in list(self.get_xiaomi_daily_summary_samples(conn)):
+                        device_id = sample.device_id
+                        if not device_id:
+                            logging.error("Sample has no device ID")
+                            continue
+
+                        # Get device tags
+                        if device_id not in device_cache:
+                            device_cache[device_id] = self.get_device_info(
+                                device_id, conn
+                            )
+
+                        common_tags = {
+                            "user_id": str(sample.user_id),
+                            "source": "gadgetbridge",
+                            **device_cache[device_id].to_tags(),
+                        }
+
+                        points.extend(sample.to_influxdb_points(common_tags))
+
+                    for sample in list(self.get_xiaomi_sleep_stage_samples(conn)):
+                        device_id = sample.device_id
+                        if not device_id:
+                            logging.error("Sample has no device ID")
+                            continue
+
+                        # Get device tags
+                        if device_id not in device_cache:
+                            device_cache[device_id] = self.get_device_info(
+                                device_id, conn
+                            )
+
+                        common_tags = {
+                            "user_id": str(sample.user_id),
+                            "source": "gadgetbridge",
+                            **device_cache[device_id].to_tags(),
+                        }
+
+                        points.extend(sample.to_influxdb_points(common_tags))
+
+                    for sample in list(self.get_xiaomi_sleep_time_samples(conn)):
+                        device_id = sample.device_id
+                        if not device_id:
+                            logging.error("Sample has no device ID")
+                            continue
+
+                        # Get device tags
+                        if device_id not in device_cache:
+                            device_cache[device_id] = self.get_device_info(
+                                device_id, conn
+                            )
+
+                        common_tags = {
+                            "user_id": str(sample.user_id),
+                            "source": "gadgetbridge",
+                            **device_cache[device_id].to_tags(),
+                        }
+
+                        points.extend(sample.to_influxdb_points(common_tags))
 
                     for sample in list(self.get_huami_activity_samples(conn)) + list(
                         self.get_xiaomi_activity_samples(conn)
