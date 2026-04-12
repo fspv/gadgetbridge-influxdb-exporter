@@ -274,6 +274,7 @@ class ActivitySample(BaseModel):
             point = point.field("raw_intensity", value=sample.raw_intensity)
 
         # Sleep states
+        # https://github.com/Freeyourgadget/Gadgetbridge/blob/a0948ee1cbc2a870f91d313f8e37df5f524465f7/app/src/main/java/nodomain/freeyourgadget/gadgetbridge/devices/huami/HuamiExtendedSampleProvider.java#L97
         if sample.sleep:
             point = point.field("sleep", value=sample.sleep)
 
