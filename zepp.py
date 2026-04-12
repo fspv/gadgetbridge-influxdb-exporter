@@ -10,6 +10,7 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 import google_drive
 import models
+from gadgetbridge import write_points_batched
 
 
 def process_activity_archive(tar_path: Path) -> list[models.ActivitySample]:
@@ -121,12 +122,12 @@ class MetricsExporter:
                 for sample in samples:
                     points.extend(sample.to_influxdb_points({"source": "zepp"}))
 
-                # Write batch of points
-                logging.info(f"Writing {len(points)} points to InfluxDB")
-                self._write_api.write(
-                    bucket=self._settings.influxdb_bucket, record=points
+                write_points_batched(
+                    self._write_api,
+                    self._settings.influxdb_bucket,
+                    points,
+                    self._settings.influxdb_batch_size,
                 )
-                logging.info("Metrics export complete")
             except Exception as e:
                 logging.error(f"Error exporting metrics: {e}")
                 raise

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     influxdb_token: str
     influxdb_org: str
     influxdb_bucket: str
+    influxdb_batch_size: int = 10000
     run_interval: int = 3600  # seconds
     daemon: bool = False  # run indefinitely
     debug: bool = False
@@ -51,15 +52,23 @@ class XiaomiDailySummarySample(BaseModel):
     spo2_average: int | None = Field(alias="SPO2_AVG", default=None)
     training_load_day: int | None = Field(alias="TRAINING_LOAD_DAY", default=None)
     training_load_week: int | None = Field(alias="TRAINING_LOAD_WEEK", default=None)
-    vitality_increase_light: int | None = Field(alias="VITALITY_INCREASE_LIGHT", default=None)
-    vitality_increase_moderate: int | None = Field(alias="VITALITY_INCREASE_MODERATE", default=None)
-    vitality_increase_high: int | None = Field(alias="VITALITY_INCREASE_HIGH", default=None)
+    vitality_increase_light: int | None = Field(
+        alias="VITALITY_INCREASE_LIGHT", default=None
+    )
+    vitality_increase_moderate: int | None = Field(
+        alias="VITALITY_INCREASE_MODERATE", default=None
+    )
+    vitality_increase_high: int | None = Field(
+        alias="VITALITY_INCREASE_HIGH", default=None
+    )
     vitality_current: int | None = Field(alias="VITALITY_CURRENT", default=None)
 
     def to_influxdb_points(self, tags: dict[str, str]) -> list[Point]:
         sample = self
 
-        point = Point("xiaomi_daily_summary_sample").time(datetime.fromtimestamp(sample.timestamp / 1000))
+        point = Point("xiaomi_daily_summary_sample").time(
+            datetime.fromtimestamp(sample.timestamp / 1000)
+        )
 
         for key, value in tags.items():
             point = point.tag(key, value)
@@ -74,13 +83,17 @@ class XiaomiDailySummarySample(BaseModel):
             point = point.field("heart_rate_max", value=sample.heart_rate_max)
 
         if sample.heart_rate_max_timestamp:
-            point = point.field("heart_rate_max_timestamp", value=sample.heart_rate_max_timestamp)
+            point = point.field(
+                "heart_rate_max_timestamp", value=sample.heart_rate_max_timestamp
+            )
 
         if sample.heart_rate_min:
             point = point.field("heart_rate_min", value=sample.heart_rate_min)
 
         if sample.heart_rate_min_timestamp:
-            point = point.field("heart_rate_min_timestamp", value=sample.heart_rate_min_timestamp)
+            point = point.field(
+                "heart_rate_min_timestamp", value=sample.heart_rate_min_timestamp
+            )
 
         if sample.heart_rate_average:
             point = point.field("heart_rate_average", value=sample.heart_rate_average)
@@ -119,20 +132,26 @@ class XiaomiDailySummarySample(BaseModel):
             point = point.field("training_load_week", value=sample.training_load_week)
 
         if sample.vitality_increase_light:
-            point = point.field("vitality_increase_light", value=sample.vitality_increase_light)
+            point = point.field(
+                "vitality_increase_light", value=sample.vitality_increase_light
+            )
 
         if sample.vitality_increase_moderate:
-            point = point.field("vitality_increase_moderate", value=sample.vitality_increase_moderate)
+            point = point.field(
+                "vitality_increase_moderate", value=sample.vitality_increase_moderate
+            )
 
         if sample.vitality_increase_high:
-            point = point.field("vitality_increase_high", value=sample.vitality_increase_high)
-
+            point = point.field(
+                "vitality_increase_high", value=sample.vitality_increase_high
+            )
 
         if sample.vitality_current:
             point = point.field("vitality_current", value=sample.vitality_current)
 
         logging.debug(f"Daily summary sample point: {point.to_line_protocol()}")
         return [point]
+
 
 class XiaomiSleepStageSample(BaseModel):
     timestamp: int = Field(alias="TIMESTAMP")
@@ -144,7 +163,9 @@ class XiaomiSleepStageSample(BaseModel):
     def to_influxdb_points(self, tags: dict[str, str]) -> list[Point]:
         sample = self
 
-        point = Point("xiaomi_sleep_stage_sample").time(datetime.fromtimestamp(sample.timestamp / 1000))
+        point = Point("xiaomi_sleep_stage_sample").time(
+            datetime.fromtimestamp(sample.timestamp / 1000)
+        )
 
         for key, value in tags.items():
             point = point.tag(key, value)
@@ -154,6 +175,7 @@ class XiaomiSleepStageSample(BaseModel):
 
         logging.debug(f"Sleep stage sample point: {point.to_line_protocol()}")
         return [point]
+
 
 class XiaomiSleepTimeSample(BaseModel):
     timestamp: int = Field(alias="TIMESTAMP")
@@ -175,7 +197,9 @@ class XiaomiSleepTimeSample(BaseModel):
     def to_influxdb_points(self, tags: dict[str, str]) -> list[Point]:
         sample = self
 
-        point = Point("xiaomi_sleep_time_sample").time(datetime.fromtimestamp(sample.timestamp / 1000))
+        point = Point("xiaomi_sleep_time_sample").time(
+            datetime.fromtimestamp(sample.timestamp / 1000)
+        )
 
         for key, value in tags.items():
             point = point.tag(key, value)
@@ -193,7 +217,9 @@ class XiaomiSleepTimeSample(BaseModel):
             point = point.field("deep_sleep_duration", value=sample.deep_sleep_duration)
 
         if sample.light_sleep_duration:
-            point = point.field("light_sleep_duration", value=sample.light_sleep_duration)
+            point = point.field(
+                "light_sleep_duration", value=sample.light_sleep_duration
+            )
 
         if sample.rem_sleep_duration:
             point = point.field("rem_sleep_duration", value=sample.rem_sleep_duration)
@@ -203,6 +229,7 @@ class XiaomiSleepTimeSample(BaseModel):
 
         logging.debug(f"Sleep time sample point: {point.to_line_protocol()}")
         return [point]
+
 
 class ActivitySample(BaseModel):
     timestamp: int = Field(alias="TIMESTAMP")
@@ -240,7 +267,11 @@ class ActivitySample(BaseModel):
             point = point.tag(key, value)
 
         if sample.has_valid_heart_rate:
-            heart_rate_point = Point("heart_rate").time(sample.datetime).field("heart_rate", value=sample.heart_rate)
+            heart_rate_point = (
+                Point("heart_rate")
+                .time(sample.datetime)
+                .field("heart_rate", value=sample.heart_rate)
+            )
             for key, value in tags.items():
                 heart_rate_point = heart_rate_point.tag(key, value)
             points.append(heart_rate_point)
@@ -250,7 +281,9 @@ class ActivitySample(BaseModel):
         # Steps point
         steps = sample.steps
         if steps and steps > 0:
-            steps_point = Point("steps").time(sample.datetime).field("steps", value=sample.steps)
+            steps_point = (
+                Point("steps").time(sample.datetime).field("steps", value=sample.steps)
+            )
             for key, value in tags.items():
                 steps_point = steps_point.tag(key, value)
             points.append(steps_point)

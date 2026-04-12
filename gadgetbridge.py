@@ -1,13 +1,32 @@
 import logging
 import sqlite3
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Sequence
 
-from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client import InfluxDBClient, Point
+from influxdb_client.client.write_api import SYNCHRONOUS, WriteApi
 from pydantic import BaseModel, ConfigDict, Field
 
 import google_drive
 import models
+
+
+def write_points_batched(
+    write_api: WriteApi,
+    bucket: str,
+    points: Sequence[Point],
+    batch_size: int,
+) -> None:
+    total = len(points)
+    logging.info(f"Writing {total} points to InfluxDB in batches of {batch_size}")
+    for i in range(0, total, batch_size):
+        batch = points[i : i + batch_size]
+        logging.info(
+            f"Writing batch {i // batch_size + 1}"
+            f"/{(total + batch_size - 1) // batch_size}"
+            f" ({len(batch)} points)"
+        )
+        write_api.write(bucket=bucket, record=list(batch))
+    logging.info(f"Finished writing {total} points to InfluxDB")
 
 
 class DeviceInfo(BaseModel):
@@ -164,7 +183,7 @@ class MetricsExporter:
                 continue
 
     def get_xiaomi_daily_summary_samples(
-            self, conn: sqlite3.Connection
+        self, conn: sqlite3.Connection
     ) -> Iterator[models.XiaomiDailySummarySample]:
         """Get all daily summary samples from the database."""
         conn.row_factory = sqlite3.Row
@@ -192,7 +211,9 @@ class MetricsExporter:
 
         for row in cursor:
             try:
-                daily_summary_sample = models.XiaomiDailySummarySample.model_validate(dict(row))
+                daily_summary_sample = models.XiaomiDailySummarySample.model_validate(
+                    dict(row)
+                )
                 logging.debug(f"Daily summary sample: {daily_summary_sample}")
                 yield daily_summary_sample
             except Exception as e:
@@ -228,7 +249,9 @@ class MetricsExporter:
 
         for row in cursor:
             try:
-                sleep_stage_sample = models.XiaomiSleepStageSample.model_validate(dict(row))
+                sleep_stage_sample = models.XiaomiSleepStageSample.model_validate(
+                    dict(row)
+                )
                 logging.debug(f"Sleep stage sample: {sleep_stage_sample}")
                 yield sleep_stage_sample
             except Exception as e:
@@ -264,7 +287,9 @@ class MetricsExporter:
 
         for row in cursor:
             try:
-                sleep_time_sample = models.XiaomiSleepTimeSample.model_validate(dict(row))
+                sleep_time_sample = models.XiaomiSleepTimeSample.model_validate(
+                    dict(row)
+                )
                 logging.debug(f"Sleep time sample: {sleep_time_sample}")
                 yield sleep_time_sample
             except Exception as e:
@@ -374,12 +399,12 @@ class MetricsExporter:
 
                         points.extend(sample.to_influxdb_points(common_tags))
 
-                    # Write batch of points
-                    logging.info(f"Writing {len(points)} points to InfluxDB")
-                    self._write_api.write(
-                        bucket=self._settings.influxdb_bucket, record=points
+                    write_points_batched(
+                        self._write_api,
+                        self._settings.influxdb_bucket,
+                        points,
+                        self._settings.influxdb_batch_size,
                     )
-                    logging.info("Metrics export complete")
             except Exception as e:
                 logging.error(f"Error exporting metrics: {e}")
                 raise
